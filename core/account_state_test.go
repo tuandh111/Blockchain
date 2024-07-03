@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 
 	"Blockchain/crypto"
@@ -11,6 +12,7 @@ func TestAccounState(t *testing.T) {
 	state := NewAccountState()
 
 	address := crypto.GeneratePrivateKey().PublicKey().Address()
+	fmt.Println(address)
 	account := state.CreateAccount(address)
 
 	assert.Equal(t, account.Address, address)

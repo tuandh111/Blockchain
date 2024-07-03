@@ -37,18 +37,22 @@ func main() {
 	if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
 		panic(err)
 	}
+
+	if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
+		panic(err)
+	}
 	//
-	//collectionOwnerPrivKey := crypto.GeneratePrivateKey()
-	//collectionHash := createCollectionTx(collectionOwnerPrivKey)
+	collectionOwnerPrivKey := crypto.GeneratePrivateKey()
+	collectionHash := createCollectionTx(collectionOwnerPrivKey)
 	//
-	//txSendTicker := time.NewTicker(1 * time.Second)
-	//go func() {
-	//	for i := 0; i < 20; i++ {
-	//		nftMinter(collectionOwnerPrivKey, collectionHash)
-	//
-	//		<-txSendTicker.C
-	//	}
-	//}()
+	txSendTicker := time.NewTicker(1 * time.Second)
+	go func() {
+		for i := 0; i < 20; i++ {
+			nftMinter(collectionOwnerPrivKey, collectionHash)
+
+			<-txSendTicker.C
+		}
+	}()
 
 	select {}
 }
@@ -56,8 +60,6 @@ func main() {
 func sendTransaction(privKey crypto.PrivateKey, toPrivKey crypto.PrivateKey) error {
 	tx := core.NewTransaction(nil)
 	tx.From = privKey.PublicKey()
-	//////add
-	//validatorPrivKey := crypto.GeneratePrivateKey()
 	tx.To = toPrivKey.PublicKey()
 	tx.Data = []byte("chuyển khoản")
 	tx.Value = 666
@@ -103,6 +105,7 @@ func createCollectionTx(privKey crypto.PrivateKey) types.Hash {
 		Fee:      200,
 		MetaData: []byte("chicken and egg collection!"),
 	}
+	tx.From = privKey.PublicKey()
 	tx.Sign(privKey)
 
 	buf := &bytes.Buffer{}
@@ -138,6 +141,7 @@ func nftMinter(privKey crypto.PrivateKey, collection types.Hash) {
 	}
 
 	tx := core.NewTransaction(nil)
+	tx.From = privKey.PublicKey()
 	tx.TxInner = core.MintTx{
 		Fee:             200,
 		NFT:             util.RandomHash(),

@@ -56,7 +56,6 @@ func (k PublicKey) String() string {
 
 func (k PublicKey) Address() types.Address {
 	h := sha256.Sum256(k)
-
 	return types.AddressFromBytes(h[len(h)-20:])
 }
 
