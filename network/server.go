@@ -436,25 +436,9 @@ func (s *Server) createNewBlock() error {
 	// we will implement some kind of complexity function to determine how
 	// many transactions can be included in a block.
 	txx := s.mempool.Pending()
-
-	//var transactions []*core.Transaction
-	//validatorPrivKey := crypto.GeneratePrivateKey()
-	//coinbase := crypto.PublicKey{}
-	//tx1 := core.NewTransaction(nil)
-	//tx1.From = coinbase
-	//tx1.To = coinbase
-	//tx1.Value = 3_000_001
-	//tx1.Sign(validatorPrivKey)
-	//// Append the first transaction to the transactions slice
-	//transactions = append(transactions, tx1)
-	//
-	//tx2 := core.NewTransaction(nil)
-	//tx2.From = coinbase
-	//tx2.To = coinbase
-	//tx2.Value = 5_000_000
-	//tx2.Sign(validatorPrivKey)
-	//transactions = append(transactions, tx2)
-
+	if len(txx) == 0 {
+		return fmt.Errorf("Pending transactions are empty")
+	}
 	block, err := core.NewBlockFromPrevHeader(currentHeader, txx)
 	if err != nil {
 		return err
@@ -467,8 +451,6 @@ func (s *Server) createNewBlock() error {
 		return err
 	}
 
-	// TODO(@anthdm): pending pool of tx should only reflect on validator nodes.
-	// Right now "normal nodes" does not have their pending pool cleared.
 	s.mempool.ClearPending()
 
 	go s.broadcastBlock(block)

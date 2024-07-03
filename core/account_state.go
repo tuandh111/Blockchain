@@ -51,11 +51,11 @@ func (s *AccountState) GetAccount(address types.Address) (*Account, error) {
 
 func (s *AccountState) getAccountWithoutLock(address types.Address) (*Account, error) {
 
-	account, ok := s.accounts[address]
+	account, _ := s.accounts[address]
 
-	if !ok {
-		return nil, ErrAccountNotFound
-	}
+	//if !ok {
+	//	return nil, ErrAccountNotFound
+	//}
 
 	return account, nil
 }
@@ -76,28 +76,28 @@ func (s *AccountState) Transfer(from, to types.Address, amount uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	fromAccount, err := s.getAccountWithoutLock(from)
-	if err != nil {
-		return err
-	}
+	//fromAccount, err := s.getAccountWithoutLock(from)
+	//if err != nil {
+	//	return err
+	//}
 
-	if fromAccount.Address.String() != "996fb92427ae41e4649b934ca495991b7852b855" {
-		if fromAccount.Balance < amount {
-			return ErrInsufficientBalance
-		}
-	}
-
-	if fromAccount.Balance != 0 {
-		fromAccount.Balance -= amount
-	}
-
-	if s.accounts[to] == nil {
-		s.accounts[to] = &Account{
-			Address: to,
-		}
-	}
-
-	s.accounts[to].Balance += amount
+	//if fromAccount.Address.String() != "996fb92427ae41e4649b934ca495991b7852b855" {
+	//	if fromAccount.Balance < amount {
+	//		return ErrInsufficientBalance
+	//	}
+	//}
+	//
+	//if fromAccount.Balance != 0 {
+	//	fromAccount.Balance -= amount
+	//}
+	//
+	//if s.accounts[to] == nil {
+	//	s.accounts[to] = &Account{
+	//		Address: to,
+	//	}
+	//}
+	//
+	//s.accounts[to].Balance += amount
 
 	return nil
 }

@@ -18,7 +18,8 @@ func main() {
 	validatorPrivKey := crypto.GeneratePrivateKey()
 	localNode := makeServer("LOCAL_NODE", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
 	go localNode.Start()
-	remoteNode := makeServer("REMOTE_NODE", nil, ":4000", []string{":5000"}, ":9001")
+	toValidatorPrivKey := crypto.GeneratePrivateKey()
+	remoteNode := makeServer("REMOTE_NODE", &toValidatorPrivKey, ":4000", []string{":5000"}, ":9001")
 	go remoteNode.Start()
 	//
 	remoteNodeB := makeServer("REMOTE_NODE_B", nil, ":5000", nil, "")
@@ -33,9 +34,9 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 	//
-	//if err := sendTransaction(validatorPrivKey); err != nil {
-	//	panic(err)
-	//}
+	if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
+		panic(err)
+	}
 	//
 	//collectionOwnerPrivKey := crypto.GeneratePrivateKey()
 	//collectionHash := createCollectionTx(collectionOwnerPrivKey)
@@ -52,12 +53,13 @@ func main() {
 	select {}
 }
 
-func sendTransaction(privKey crypto.PrivateKey) error {
-	toPrivKey := crypto.GeneratePrivateKey()
+func sendTransaction(privKey crypto.PrivateKey, toPrivKey crypto.PrivateKey) error {
 	tx := core.NewTransaction(nil)
 	tx.From = privKey.PublicKey()
-	//add
+	//////add
+	//validatorPrivKey := crypto.GeneratePrivateKey()
 	tx.To = toPrivKey.PublicKey()
+	tx.Data = []byte("chuyển khoản")
 	tx.Value = 666
 	if err := tx.Sign(privKey); err != nil {
 		return err
