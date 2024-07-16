@@ -59,7 +59,9 @@ func (s *Server) Start() error {
 	e.GET("/block/:hashorid", s.handleGetBlock)
 	e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/tx", s.handlePostTx)
-
+	e.GET("/txs", s.handleGetAllTxs)
+	e.GET("/tx/withinner", s.handleGetTransactionsWithTxInner)
+	e.GET("/tx/withoutinner", s.handleGetTransactionsWithoutTxInner)
 	return e.Start(s.ListenAddr)
 }
 
@@ -73,7 +75,31 @@ func (s *Server) handlePostTx(c echo.Context) error {
 
 	return nil
 }
+func (s *Server) handleGetAllTxs(c echo.Context) error {
+	txs, err := s.bc.GetAllTransactions()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, APIError{Error: err.Error()})
+	}
 
+	return c.JSON(http.StatusOK, txs)
+}
+func (s *Server) handleGetTransactionsWithTxInner(c echo.Context) error {
+	txs, err := s.bc.GetTransactionsWithTxInner()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, txs)
+}
+
+func (s *Server) handleGetTransactionsWithoutTxInner(c echo.Context) error {
+	txs, err := s.bc.GetTransactionsWithoutTxInner()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, txs)
+}
 func (s *Server) handleGetTx(c echo.Context) error {
 	hash := c.Param("hash")
 

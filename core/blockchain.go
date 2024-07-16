@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -143,6 +144,61 @@ func (bc *Blockchain) GetTxByHash(hash types.Hash) (*Transaction, error) {
 	}
 
 	return tx, nil
+}
+
+func (bc *Blockchain) GetAllTransactions() ([]*Transaction, error) {
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
+
+	if len(bc.txStore) == 0 {
+		return nil, errors.New("no transactions found")
+	}
+
+	transactions := make([]*Transaction, 0, len(bc.txStore))
+	for _, tx := range bc.txStore {
+		transactions = append(transactions, tx)
+	}
+
+	for i, j := 0, len(transactions)-1; i < j; i, j = i+1, j-1 {
+		transactions[i], transactions[j] = transactions[j], transactions[i]
+	}
+
+	return transactions, nil
+}
+func (bc *Blockchain) GetTransactionsWithTxInner() ([]*Transaction, error) {
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
+
+	if len(bc.txStore) == 0 {
+		return nil, errors.New("no transactions found")
+	}
+
+	var transactions []*Transaction
+	for _, tx := range bc.txStore {
+		if tx.TxInner != nil {
+			transactions = append(transactions, tx)
+		}
+	}
+
+	return transactions, nil
+}
+
+func (bc *Blockchain) GetTransactionsWithoutTxInner() ([]*Transaction, error) {
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
+
+	if len(bc.txStore) == 0 {
+		return nil, errors.New("no transactions found")
+	}
+
+	var transactions []*Transaction
+	for _, tx := range bc.txStore {
+		if tx.TxInner == nil {
+			transactions = append(transactions, tx)
+		}
+	}
+
+	return transactions, nil
 }
 
 func (bc *Blockchain) HasBlock(height uint32) bool {

@@ -37,7 +37,7 @@ func main() {
 	if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
 		panic(err)
 	}
-
+	time.Sleep(1 * time.Second)
 	if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
 		panic(err)
 	}
