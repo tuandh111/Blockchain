@@ -179,7 +179,9 @@ func (bc *Blockchain) GetTransactionsWithTxInner() ([]*Transaction, error) {
 			transactions = append(transactions, tx)
 		}
 	}
-
+	for i, j := 0, len(transactions)-1; i < j; i, j = i+1, j-1 {
+		transactions[i], transactions[j] = transactions[j], transactions[i]
+	}
 	return transactions, nil
 }
 
@@ -197,7 +199,9 @@ func (bc *Blockchain) GetTransactionsWithoutTxInner() ([]*Transaction, error) {
 			transactions = append(transactions, tx)
 		}
 	}
-
+	for i, j := 0, len(transactions)-1; i < j; i, j = i+1, j-1 {
+		transactions[i], transactions[j] = transactions[j], transactions[i]
+	}
 	return transactions, nil
 }
 

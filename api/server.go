@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/gob"
 	"encoding/hex"
+	"github.com/labstack/echo/v4/middleware"
 	"net/http"
 	"strconv"
 
@@ -55,7 +56,9 @@ func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *core.Transact
 
 func (s *Server) Start() error {
 	e := echo.New()
-
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+	}))
 	e.GET("/block/:hashorid", s.handleGetBlock)
 	e.GET("/tx/:hash", s.handleGetTx)
 	e.POST("/tx", s.handlePostTx)
