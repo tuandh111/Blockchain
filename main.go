@@ -40,22 +40,22 @@ func main() {
 	if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
 		panic(err)
 	}
-	time.Sleep(1 * time.Second)
-	if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
-		panic(err)
-	}
-	//
-	collectionOwnerPrivKey := crypto.GeneratePrivateKey()
-	collectionHash := createCollectionTx(collectionOwnerPrivKey)
-	//
-	txSendTicker := time.NewTicker(1 * time.Second)
-	go func() {
-		for i := 0; i < 20; i++ {
-			nftMinter(collectionOwnerPrivKey, collectionHash)
-
-			<-txSendTicker.C
+	/*	time.Sleep(1 * time.Second)
+		if err := sendTransaction(validatorPrivKey, toValidatorPrivKey); err != nil {
+			panic(err)
 		}
-	}()
+		//
+		collectionOwnerPrivKey := crypto.GeneratePrivateKey()
+		collectionHash := createCollectionTx(collectionOwnerPrivKey)
+		//
+		txSendTicker := time.NewTicker(1 * time.Second)
+		go func() {
+			for i := 0; i < 20; i++ {
+				nftMinter(collectionOwnerPrivKey, collectionHash)
+
+				<-txSendTicker.C
+			}
+		}()*/
 
 	select {}
 }
@@ -102,7 +102,7 @@ func makeServer(id string, pk *crypto.PrivateKey, addr string, seedNodes []strin
 func createCollectionTx(privKey crypto.PrivateKey) types.Hash {
 	tx := core.NewTransaction(nil)
 	tx.TxInner = core.CollectionTx{
-		Fee:      200,
+		Id:       200,
 		MetaData: []byte("chicken and egg collection!"),
 	}
 	tx.From = privKey.PublicKey()

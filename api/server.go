@@ -2,6 +2,7 @@ package api
 
 import (
 	"Blockchain/crypto"
+	"bytes"
 	"encoding/gob"
 	"encoding/hex"
 	"github.com/labstack/echo/v4/middleware"
@@ -43,11 +44,18 @@ type ServerConfig struct {
 type PrivateKeyResponse struct {
 	PrivateKey string `json:"privateKey"`
 }
+type TransactionRequest struct {
+	Message string `json:"Message"`
+	Id      uint64 `json:"Id"`
+}
 type Server struct {
 	txChan chan *core.Transaction
 	ServerConfig
 	bc      *core.Blockchain
 	privKey *crypto.PrivateKey
+}
+type Message struct {
+	Message string `json:"Message"`
 }
 
 func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *core.Transaction, privKey *crypto.PrivateKey) *Server {
@@ -71,34 +79,61 @@ func (s *Server) Start() error {
 	e.GET("/tx/withinner", s.handleGetTransactionsWithTxInner)
 	e.GET("/tx/withoutinner", s.handleGetTransactionsWithoutTxInner)
 	e.GET("/priv", s.handleGeneratePrivateKey)
+	e.POST("/create-and-send-tx", s.handleCreateAndSendTx)
+	e.POST("/create-and-send-nft", s.handleCreateAndSendNFT)
 	return e.Start(s.ListenAddr)
 }
+func (s *Server) handleCreateAndSendNFT(c echo.Context) error {
+	var req TransactionRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: "Invalid request payload: " + err.Error()})
+	}
+	fromPrivKeyStr := s.privKey.PublicKey()
+	toPrivKeyStr := s.privKey.PublicKey()
+	err := sendTransactionNFT(fromPrivKeyStr, toPrivKeyStr, []byte(req.Message), req.Id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, APIError{Error: "Failed to send transaction: " + err.Error()})
+	}
+	return c.JSON(http.StatusOK, Message{"Send NFT successfully"})
+}
+func (s *Server) handleCreateAndSendTx(c echo.Context) error {
+	var req TransactionRequest
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: "Invalid request payload: " + err.Error()})
+	}
+	fromPrivKeyStr := s.privKey.PublicKey()
+	toPrivKeyStr := s.privKey.PublicKey()
+
+	err := sendTransaction(fromPrivKeyStr, toPrivKeyStr, []byte(req.Message), req.Id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, APIError{Error: "Failed to send transaction: " + err.Error()})
+	}
+	return c.JSON(http.StatusOK, Message{"Send tx successfully"})
+}
+
 func (s *Server) handleGeneratePrivateKey(c echo.Context) error {
 	privKey := crypto.GeneratePrivateKey()
-
 	response := PrivateKeyResponse{
 		PrivateKey: privKey.PublicKey().String(),
 	}
-
 	return c.JSON(http.StatusOK, response)
 }
 
 func (s *Server) handlePostTx(c echo.Context) error {
-	tx := &core.Transaction{}
-
+	tx := core.NewTransaction(nil)
 	if err := gob.NewDecoder(c.Request().Body).Decode(tx); err != nil {
-		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+		return c.JSON(http.StatusBadRequest, APIError{Error: "Failed to decode GOB data: " + err.Error()})
 	}
 	signedTx, err := s.signTransaction(tx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, APIError{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, APIError{Error: "Failed to sign transaction: " + err.Error()})
 	}
-
 	s.txChan <- signedTx
-	//s.txChan <- tx
 
-	return nil
+	return c.NoContent(http.StatusOK)
 }
+
 func (s *Server) signTransaction(tx *core.Transaction) (*core.Transaction, error) {
 	hash := tx.Hash(core.TxHasher{}).ToSlice()
 	sig, err := s.privKey.Sign(hash)
@@ -109,7 +144,6 @@ func (s *Server) signTransaction(tx *core.Transaction) (*core.Transaction, error
 		R: sig.R,
 		S: sig.S,
 	}
-
 	return tx, nil
 
 }
@@ -204,4 +238,47 @@ func intoJSONBlock(block *core.Block) Block {
 		Signature:     block.Signature.String(),
 		TxResponse:    txResponse,
 	}
+}
+func sendTransaction(fromPubKey crypto.PublicKey, toPubKey crypto.PublicKey, data []byte, value uint64) error {
+	tx := core.NewTransaction(nil)
+	tx.From = fromPubKey
+	tx.To = toPubKey
+	tx.Data = data
+	tx.Value = value
+
+	buf := &bytes.Buffer{}
+
+	if err := tx.Encode(core.NewGobTxEncoder(buf)); err != nil {
+		panic(err)
+	}
+	req, err := http.NewRequest("POST", "http://localhost:9000/tx", buf)
+	if err != nil {
+		panic(err)
+	}
+	client := http.Client{}
+	_, err = client.Do(req)
+
+	return err
+}
+func sendTransactionNFT(fromPubKey crypto.PublicKey, toPubKey crypto.PublicKey, data []byte, value uint64) error {
+	tx := core.NewTransaction(nil)
+	tx.From = fromPubKey
+	tx.TxInner = core.CollectionTx{
+		Id:       int64(value),
+		MetaData: data,
+	}
+
+	buf := &bytes.Buffer{}
+
+	if err := tx.Encode(core.NewGobTxEncoder(buf)); err != nil {
+		panic(err)
+	}
+	req, err := http.NewRequest("POST", "http://localhost:9000/tx", buf)
+	if err != nil {
+		panic(err)
+	}
+	client := http.Client{}
+	_, err = client.Do(req)
+
+	return err
 }

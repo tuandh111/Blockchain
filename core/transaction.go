@@ -17,7 +17,7 @@ const (
 )
 
 type CollectionTx struct {
-	Fee      int64
+	Id       int64
 	MetaData []byte
 }
 
