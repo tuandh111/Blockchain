@@ -1,6 +1,7 @@
 package api
 
 import (
+	"Blockchain/crypto"
 	"encoding/gob"
 	"encoding/hex"
 	"github.com/labstack/echo/v4/middleware"
@@ -39,18 +40,22 @@ type ServerConfig struct {
 	Logger     log.Logger
 	ListenAddr string
 }
-
+type PrivateKeyResponse struct {
+	PrivateKey string `json:"privateKey"`
+}
 type Server struct {
 	txChan chan *core.Transaction
 	ServerConfig
-	bc *core.Blockchain
+	bc      *core.Blockchain
+	privKey *crypto.PrivateKey
 }
 
-func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *core.Transaction) *Server {
+func NewServer(cfg ServerConfig, bc *core.Blockchain, txChan chan *core.Transaction, privKey *crypto.PrivateKey) *Server {
 	return &Server{
 		ServerConfig: cfg,
 		bc:           bc,
 		txChan:       txChan,
+		privKey:      privKey,
 	}
 }
 
@@ -65,19 +70,50 @@ func (s *Server) Start() error {
 	e.GET("/txs", s.handleGetAllTxs)
 	e.GET("/tx/withinner", s.handleGetTransactionsWithTxInner)
 	e.GET("/tx/withoutinner", s.handleGetTransactionsWithoutTxInner)
+	e.GET("/priv", s.handleGeneratePrivateKey)
 	return e.Start(s.ListenAddr)
+}
+func (s *Server) handleGeneratePrivateKey(c echo.Context) error {
+	privKey := crypto.GeneratePrivateKey()
+
+	response := PrivateKeyResponse{
+		PrivateKey: privKey.PublicKey().String(),
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func (s *Server) handlePostTx(c echo.Context) error {
 	tx := &core.Transaction{}
+
 	if err := gob.NewDecoder(c.Request().Body).Decode(tx); err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
 	}
+	signedTx, err := s.signTransaction(tx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, APIError{Error: err.Error()})
+	}
 
-	s.txChan <- tx
+	s.txChan <- signedTx
+	//s.txChan <- tx
 
 	return nil
 }
+func (s *Server) signTransaction(tx *core.Transaction) (*core.Transaction, error) {
+	hash := tx.Hash(core.TxHasher{}).ToSlice()
+	sig, err := s.privKey.Sign(hash)
+	if err != nil {
+		return nil, err
+	}
+	tx.Signature = &crypto.Signature{
+		R: sig.R,
+		S: sig.S,
+	}
+
+	return tx, nil
+
+}
+
 func (s *Server) handleGetAllTxs(c echo.Context) error {
 	txs, err := s.bc.GetAllTransactions()
 	if err != nil {

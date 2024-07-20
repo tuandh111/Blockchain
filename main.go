@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -16,9 +17,11 @@ import (
 
 func main() {
 	validatorPrivKey := crypto.GeneratePrivateKey()
+	fmt.Println("private key: ", validatorPrivKey.PublicKey())
 	localNode := makeServer("LOCAL_NODE", &validatorPrivKey, ":3000", []string{":4000"}, ":9000")
 	go localNode.Start()
 	toValidatorPrivKey := crypto.GeneratePrivateKey()
+	fmt.Println("to private key: ", toValidatorPrivKey.PublicKey())
 	remoteNode := makeServer("REMOTE_NODE", &toValidatorPrivKey, ":4000", []string{":5000"}, ":9001")
 	go remoteNode.Start()
 	//
@@ -62,10 +65,7 @@ func sendTransaction(privKey crypto.PrivateKey, toPrivKey crypto.PrivateKey) err
 	tx.From = privKey.PublicKey()
 	tx.To = toPrivKey.PublicKey()
 	tx.Data = []byte("chuyển khoản")
-	tx.Value = 666
-	if err := tx.Sign(privKey); err != nil {
-		return err
-	}
+	tx.Value = 6699
 
 	buf := &bytes.Buffer{}
 

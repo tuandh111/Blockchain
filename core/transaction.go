@@ -31,18 +31,14 @@ type MintTx struct {
 }
 
 type Transaction struct {
-	// Only used for native NFT logic
-	TxInner any
-	// Any arbitrary data for the VM
-	Data      []byte
-	To        crypto.PublicKey
-	Value     uint64
-	From      crypto.PublicKey
-	Signature *crypto.Signature
-	Nonce     int64
-
-	// cached version of the tx data hash
-	hash types.Hash
+	TxInner   any               `json:"txInner"`
+	Data      []byte            `json:"data"`
+	To        crypto.PublicKey  `json:"to"`
+	Value     uint64            `json:"value"`
+	From      crypto.PublicKey  `json:"from"`
+	Signature *crypto.Signature `json:"signature"`
+	Nonce     int64             `json:"nonce"`
+	hash      types.Hash        `json:"-"`
 }
 
 func NewTransaction(data []byte) *Transaction {

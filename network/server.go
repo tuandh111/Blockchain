@@ -74,7 +74,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 			Logger:     opts.Logger,
 			ListenAddr: opts.APIListenAddr,
 		}
-		apiServer := api.NewServer(apiServerCfg, chain, txChan)
+		apiServer := api.NewServer(apiServerCfg, chain, txChan, opts.PrivateKey)
 		go apiServer.Start()
 
 		opts.Logger.Log("msg", "JSON API server running", "port", opts.APIListenAddr)
