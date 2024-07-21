@@ -248,6 +248,23 @@ func (bc *Blockchain) handleTransaction(tx *Transaction) error {
 	return nil
 }
 
+func (bc *Blockchain) GetBlockByTxHash(txHash types.Hash) (*Block, error) {
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
+
+	// Iterate over all blocks
+	for _, block := range bc.blocks {
+		// Check if the transaction exists in the block
+		for _, tx := range block.Transactions {
+			if tx.Hash(TxHasher{}) == txHash {
+				return block, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("block containing transaction with hash (%s) not found", txHash)
+}
+
 func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	bc.stateLock.Lock()
 	for i := 0; i < len(b.Transactions); i++ {

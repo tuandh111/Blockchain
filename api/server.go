@@ -42,7 +42,7 @@ type ServerConfig struct {
 	ListenAddr string
 }
 type PrivateKeyResponse struct {
-	PrivateKey string `json:"privateKey"`
+	Publickey string `json:"Publickey"`
 }
 type TransactionRequest struct {
 	Message string `json:"Message"`
@@ -81,6 +81,7 @@ func (s *Server) Start() error {
 	e.GET("/priv", s.handleGeneratePrivateKey)
 	e.POST("/create-and-send-tx", s.handleCreateAndSendTx)
 	e.POST("/create-and-send-nft", s.handleCreateAndSendNFT)
+	e.GET("/tx/block/:txhash", s.handleGetBlockForTx)
 	return e.Start(s.ListenAddr)
 }
 func (s *Server) handleCreateAndSendNFT(c echo.Context) error {
@@ -113,9 +114,8 @@ func (s *Server) handleCreateAndSendTx(c echo.Context) error {
 }
 
 func (s *Server) handleGeneratePrivateKey(c echo.Context) error {
-	privKey := crypto.GeneratePrivateKey()
 	response := PrivateKeyResponse{
-		PrivateKey: privKey.PublicKey().String(),
+		Publickey: s.privKey.PublicKey().String(),
 	}
 	return c.JSON(http.StatusOK, response)
 }
@@ -125,11 +125,11 @@ func (s *Server) handlePostTx(c echo.Context) error {
 	if err := gob.NewDecoder(c.Request().Body).Decode(tx); err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: "Failed to decode GOB data: " + err.Error()})
 	}
-	signedTx, err := s.signTransaction(tx)
+	_, err := s.signTransaction(tx)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, APIError{Error: "Failed to sign transaction: " + err.Error()})
 	}
-	s.txChan <- signedTx
+	s.txChan <- tx
 
 	return c.NoContent(http.StatusOK)
 }
@@ -281,4 +281,24 @@ func sendTransactionNFT(fromPubKey crypto.PublicKey, toPubKey crypto.PublicKey, 
 	_, err = client.Do(req)
 
 	return err
+}
+func (s *Server) handleGetBlockForTx(c echo.Context) error {
+	txHash := c.Param("txhash")
+
+	b, err := hex.DecodeString(txHash)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	txHashObj := types.HashFromBytes(b)
+	block, err := s.bc.GetBlockByTxHash(txHashObj)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, APIError{Error: err.Error()})
+	}
+
+	if block == nil {
+		return c.JSON(http.StatusNotFound, APIError{Error: "Block not found for transaction"})
+	}
+
+	return c.JSON(http.StatusOK, intoJSONBlock(block))
 }
