@@ -77,7 +77,19 @@ func (bc *Blockchain) handleNativeTransfer(tx *Transaction) error {
 
 	return bc.accountState.Transfer(tx.From.Address(), tx.To.Address(), tx.Value)
 }
+func (bc *Blockchain) GetAllBlocks() ([]*Block, error) {
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
 
+	if len(bc.blocks) == 0 {
+		return nil, errors.New("no blocks found")
+	}
+
+	blocks := make([]*Block, len(bc.blocks))
+	copy(blocks, bc.blocks)
+
+	return blocks, nil
+}
 func (bc *Blockchain) handleNativeNFT(tx *Transaction) error {
 	hash := tx.Hash(TxHasher{})
 

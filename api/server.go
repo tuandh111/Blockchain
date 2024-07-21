@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/hex"
+	"encoding/json"
 	"github.com/labstack/echo/v4/middleware"
 	"net/http"
 	"strconv"
@@ -44,10 +45,28 @@ type ServerConfig struct {
 type PrivateKeyResponse struct {
 	Publickey string `json:"Publickey"`
 }
+type PatientInfo struct {
+	FullName        string `json:"fullName"`
+	Age             int    `json:"age"`
+	Gender          string `json:"gender"`
+	Address         string `json:"address"`
+	PhoneNumber     string `json:"phoneNumber"`
+	Email           string `json:"email"`
+	MedicalHistory  string `json:"medicalHistory"`
+	Diagnosis       string `json:"diagnosis"`
+	TreatmentPlan   string `json:"treatmentPlan"`
+	NextAppointment string `json:"nextAppointment"`
+}
+
 type TransactionRequest struct {
+	PatientInfo PatientInfo `json:"patientInfo"`
+	Id          uint64      `json:"id"`
+}
+type TransactionMessageRequest struct {
 	Message string `json:"Message"`
 	Id      uint64 `json:"Id"`
 }
+
 type Server struct {
 	txChan chan *core.Transaction
 	ServerConfig
@@ -82,10 +101,27 @@ func (s *Server) Start() error {
 	e.POST("/create-and-send-tx", s.handleCreateAndSendTx)
 	e.POST("/create-and-send-nft", s.handleCreateAndSendNFT)
 	e.GET("/tx/block/:txhash", s.handleGetBlockForTx)
+	e.GET("/blockchain", s.getBlockChain)
 	return e.Start(s.ListenAddr)
 }
+func (s *Server) getBlockChain(c echo.Context) error {
+	// Retrieve all blocks from the blockchain
+	blocks, err := s.bc.GetAllBlocks()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+
+	// Convert each block to the Block struct for JSON response
+	var jsonBlocks []Block
+	for _, block := range blocks {
+		jsonBlocks = append(jsonBlocks, intoJSONBlock(block))
+	}
+
+	// Return the JSON response
+	return c.JSON(http.StatusOK, jsonBlocks)
+}
 func (s *Server) handleCreateAndSendNFT(c echo.Context) error {
-	var req TransactionRequest
+	var req TransactionMessageRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, APIError{Error: "Invalid request payload: " + err.Error()})
 	}
@@ -105,8 +141,12 @@ func (s *Server) handleCreateAndSendTx(c echo.Context) error {
 	}
 	fromPrivKeyStr := s.privKey.PublicKey()
 	toPrivKeyStr := s.privKey.PublicKey()
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, APIError{Error: "Failed to encode request: " + err.Error()})
+	}
 
-	err := sendTransaction(fromPrivKeyStr, toPrivKeyStr, []byte(req.Message), req.Id)
+	err = sendTransaction(fromPrivKeyStr, toPrivKeyStr, reqBytes, req.Id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, APIError{Error: "Failed to send transaction: " + err.Error()})
 	}
